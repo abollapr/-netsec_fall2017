@@ -57,7 +57,8 @@ def basicUnitTest():
     AuthToken = input("Enter your authentication token - 3 digit\n")
 
     if int(AuthToken)>0:
-
+        
+        # Packet 1 - Client Hello
         ClientHello1 = ClientHello()
         ClientHello1.UserAuthToken = AuthToken
         ClientHello1.Genre = str(Genre)
@@ -81,14 +82,16 @@ def basicUnitTest():
 
         #Generating Random Session IDs
         SessionID_Random = random.randint(1,100)
-
+        
+        #Packet 2 - Server Hello
         ServerHello1 = ServerHello()
         ServerHello1.SessionID = SessionID_Random
 
         #Keeping track of all ongoing sessions
         #SessionID_Random_List = []
         #SessionID_Random_List.insert(0,SessionID_Random)
-
+        
+        #Authentication token at this moment can be any 3 digit number
         if re.match("^\d\d\d$", str(deserializer_ClientHello.UserAuthToken)):
 
             ServerHello1.AuthResponse = 1
@@ -112,7 +115,8 @@ def basicUnitTest():
             print ("Your requested Genre is available!")
         else:
             print ("SERVER SIDE ERROR: Error with Genre or Username")
-
+        
+        #Packet 3 - Client Request 
         ClientRequest1 = ClientRequest()
         ClientRequest1.SessionID = deserializer1.SessionID
         #print (ClientRequest1.SessionID)
@@ -130,7 +134,8 @@ def basicUnitTest():
         ClientRequest1_deserailze = PacketType.Deserialize(ClientRequest1_serialize)
 
         assert ClientRequest1_deserailze == ClientRequest1
-
+        
+        #Packet 4 - Server Stream
         ServerStream1 = ServerStream()
         ServerStream1.SessionID = deserializer1.SessionID
 
@@ -146,7 +151,8 @@ def basicUnitTest():
             ServerStream1.Linktomusic == "Unexpected error"
 
         ServerStream1_serializer = ServerStream1.__serialize__()
-
+        
+        #Deserializing the final response from the server.
         deserializer1 =  PacketType.Deserializer()
         while len(ServerStream1_serializer) > 0:
             chunk, ServerStream1_serializer =  ServerStream1_serializer[:10], ServerStream1_serializer[10:]
