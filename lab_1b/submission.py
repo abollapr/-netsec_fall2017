@@ -52,6 +52,8 @@ def basicUnitTest():
     print ("~~~Welcome to Jukebox!~~~")
 
     Genre = input("Please Enter the genre you would like to listen to! Available options - Rock/Pop/Classical/Jazz \n")
+    Genre = Genre.upper()
+    print (Genre)
     AuthToken = input("Enter your authentication token - 3 digit\n")
 
     if int(AuthToken)>0:
@@ -71,7 +73,7 @@ def basicUnitTest():
             return
 
         #Genres
-        GenreList = ["Rock","Pop","Classical","Jazz"]
+        GenreList = ["ROCK","POP","CLASSICAL","JAZZ"]
         #AuthTokens
         #UserTokens = [123,345,567,789,901]
 
@@ -132,13 +134,13 @@ def basicUnitTest():
         ServerStream1 = ServerStream()
         ServerStream1.SessionID = deserializer1.SessionID
 
-        if deserializer_ClientHello.Genre == "Rock":
+        if deserializer_ClientHello.Genre == "ROCK":
             ServerStream1.Linktomusic = "https://www.youtube.com/watch?v=3_5RbI9goz4"
-        elif deserializer_ClientHello.Genre == "Pop":
+        elif deserializer_ClientHello.Genre == "POP":
             ServerStream1.Linktomusic = "https://www.youtube.com/watch?v=2VncTzuXhu0&list=PLMAV5w57ey1rYKkjhUwVpdLn3wCUTurGC"
-        elif deserializer_ClientHello.Genre == "Classical":
+        elif deserializer_ClientHello.Genre == "CLASSICAL":
             ServerStream1.Linktomusic = "https://www.youtube.com/watch?v=a-b6JgQa3EY&list=PLauX1OLju8VgJ1-oBaBDGKZeAiFav-mAE"
-        elif deserializer_ClientHello.Genre == "Jazz":
+        elif deserializer_ClientHello.Genre == "JAZZ":
             ServerStream1.Linktomusic = "https://www.youtube.com/watch?v=2o4NyCE8-Zs&list=PLjBo9Ev93QFXo9_14jtlHGEir4G_omx34"
         else:
             ServerStream1.Linktomusic == "Unexpected error"
