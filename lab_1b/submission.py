@@ -163,5 +163,5 @@ def basicUnitTest():
         print ("Incorrect Auth Token. Value should be anything above 0")
         return(basicUnitTest())
 
-
-basicUnitTest()
+if __init__ = "__main__":   
+    basicUnitTest()
