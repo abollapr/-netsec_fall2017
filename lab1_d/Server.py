@@ -1,5 +1,6 @@
 import asyncio
 import playground
+import sys
 from playground.network.packet import PacketType
 from playground.network.packet.fieldtypes import UINT32,STRING,BOOL,ListFieldType
 from playground.asyncio_lib.testing import TestLoopEx
@@ -60,22 +61,22 @@ class ServerProtocol(asyncio.Protocol):
     def __init__(self):
         #self._ip_address = '127.0.0.1'
         #self._port = 8000
-        self._transport = None
+        self.transport = None
         self.GenreList = ["ROCK", "POP", "CLASSICAL", "JAZZ"]
 
 
     def connection_made(self, transport):
-        self._transport = transport
+        self.transport = transport
         print ("Welcome to The Jukebox! \n")
-        self._deserializer = PacketType.Deserializer()
-        self._session_ID = random.randint(1,100)
+        self.deserializer = PacketType.Deserializer()
+        self.session_ID = random.randint(1,100)
 
 
     def Packet2Bytes(self, pkt):
 
         ServerHello1 = ServerHello()
 
-        ServerHello1.SessionID = self._session_ID
+        ServerHello1.SessionID = self.session_ID
 
         if re.match("^\d\d\d$", str(pkt.UserAuthToken)):
             ServerHello1.AuthResponse = 1
@@ -92,7 +93,7 @@ class ServerProtocol(asyncio.Protocol):
             print (ServerHello1.SessionID)
 
         self.ServerHello_bytes = ServerHello1.__serialize__()
-        self._transport.write(self.ServerHello_bytes)
+        self.transport.write(self.ServerHello_bytes)
 
 
     def Packet2Bytes1(self, pkt, genre_requested_c):
@@ -116,14 +117,14 @@ class ServerProtocol(asyncio.Protocol):
             ServerStream1.Link_to_music == "Unexpected error"
 
         self.ServerStream_bytes = ServerStream1.__serialize__()
-        self._transport.write(self.ServerStream_bytes)
+        self.transport.write(self.ServerStream_bytes)
 
 
     def data_received(self, data):
-        self._deserializer = PacketType.Deserializer()
-        self._deserializer.update(data)
+        self.deserializer = PacketType.Deserializer()
+        self.deserializer.update(data)
 
-        for pkt in self._deserializer.nextPackets():
+        for pkt in self.deserializer.nextPackets():
             if (pkt.DEFINITION_IDENTIFIER == "ClientHello"):
                 #dict[self._session_ID] = "Server_Hello_State"
                 self.return_value = self.Genre_Requested_by_Client_function(pkt.Genre)
@@ -136,18 +137,20 @@ class ServerProtocol(asyncio.Protocol):
         return genre_req
 
     def connection_lost(self, exc):
-        self._transport = None
+        self.transport = None
 
+if __name__ == "__main__":
 
-loop = asyncio.get_event_loop()
-coro = playground.getConnector().create_playground_server(lambda: ServerProtocol, 101)
-server = loop.run_until_complete(coro)
-try:
+    loop = asyncio.get_event_loop()
+
+    loop.set_debug(enabled=True)
+
+    coro = playground.getConnector().create_playground_server(lambda: ServerProtocol(), 102)
+
+    server = loop.run_until_complete(coro)
+
+    print ("Server's coro is done")
+
     loop.run_forever()
-except KeyboardInterrupt:
-    pass
 
-server.close()
-loop.close()
-
-
+    loop.close()
