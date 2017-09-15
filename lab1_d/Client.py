@@ -30,7 +30,6 @@ class ServerHello(PacketType):
         ("SessionID", UINT32),
         ("AuthResponse", BOOL),
         ("GenreAvailable", BOOL)
-        #("RequestBitRate", STRING)
     ]
 
 #ClientRequest Packet
@@ -60,7 +59,6 @@ class ClientProtocol(asyncio.Protocol):
         self.buffer = ""
         if callback:
             self.callback = callback
-            print("It's in callback_1")
         else:
             self.callback = print
 
@@ -88,8 +86,6 @@ class ClientProtocol(asyncio.Protocol):
                 if pkt1.AuthResponse == 1 and pkt1.GenreAvailable == 1:
                     print ("Requested genre available and authentication Suceeded! \n")
                     ClientRequest1.SessionID = pkt1.SessionID
-                    #print (pkt1.SessionID)
-                    #dict[pkt1.SessionID] = "Server_Hello_Rcd"
                     ClientRequest1.ACKofServerHello = 1
 
                     ClientRequest1_bytes = ClientRequest1.__serialize__()
@@ -116,7 +112,6 @@ class ClientProtocol(asyncio.Protocol):
                 ClientRequest1.SessionID = 0
                 ClientRequest1.ACKofServerHello = 1
                 self.transport = None
-                #print ("Unexpected Error!")
     def send(self):
 
         packet = ClientHello(UserAuthToken = '111', Genre = 'ROCK')
@@ -126,13 +121,9 @@ class ControlProtocol:
 
     def __init__(self):
         self.txProtocol = None
-        #self.param = RequestConversion().__serialize__()
-        #self.param = "tada"
 
     def buildProtocol(self):
         return ClientProtocol(self.callback)
-        #Client1 = MyClient()
-        #Client1.connection_made()
 
     def connect(self, txProtocol):
         print ("Calling connect")
@@ -145,30 +136,14 @@ class ControlProtocol:
     def callback(self):
         print ("this is the message")
         sys.stdout.flush()
-        #message = RequestConversion()
-        #self.message = message
-
-    #def stdinAlert(self):
-    #    print ("Entered Stdinput")
-    #    data = self.param
-    #    self.txProtocol.send(data)
-
 
 if __name__ == "__main__":
 
 
     loop = asyncio.get_event_loop()
-    #loop.set_debug(enabled=True)
-
     control = ControlProtocol()
-
     coro = playground.getConnector().create_playground_connection(control.buildProtocol, '20174.1.1.1', 102)
-    print ("What's up Coro?")
-
     transport, protocol = loop.run_until_complete(coro)
-
-    print ("Done with the coro")
-
     control.connect(protocol)
     loop.run_forever()
     loop.close()
