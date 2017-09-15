@@ -53,6 +53,9 @@ class  ServerStream(PacketType):
         ("Link_to_music", STRING)
     ]
 
+global dict_sessionID_states
+dict_sessionID_states = {}
+
 class ClientProtocol(asyncio.Protocol):
 
     def __init__(self, callback = None):
@@ -79,17 +82,19 @@ class ClientProtocol(asyncio.Protocol):
         self.deserializer.update(data)
 
         ClientRequest1 = ClientRequest()
+        ClientRequest1.SessionID = 0
+        dict_sessionID_states[0] = "Waiting_for_server_hello"
 
         for pkt1 in self.deserializer.nextPackets():
-            if pkt1.DEFINITION_IDENTIFIER == "ServerHello":
+            if pkt1.DEFINITION_IDENTIFIER == "ServerHello" and dict_sessionID_states[0] == "Waiting_for_server_hello":
                 #print (pkt1)
                 if pkt1.AuthResponse == 1 and pkt1.GenreAvailable == 1:
                     print ("Requested genre available and authentication Suceeded! \n")
                     ClientRequest1.SessionID = pkt1.SessionID
                     ClientRequest1.ACKofServerHello = 1
-
                     ClientRequest1_bytes = ClientRequest1.__serialize__()
                     self.transport.write(ClientRequest1_bytes)
+                    dict_sessionID_states[pkt1.SessionID] = "Client_req_sent"
 
                 elif (pkt1.AuthResponse == 0 and pkt1.GenreAvailable == 1):
                     print ("Genre is Available but auth credentials are wrong")
@@ -103,7 +108,7 @@ class ClientProtocol(asyncio.Protocol):
                     self.transport = None
 
 
-            elif (pkt1.DEFINITION_IDENTIFIER == "ServerStream"):
+            elif (pkt1.DEFINITION_IDENTIFIER == "ServerStream" and dict_sessionID_states[pkt1.SessionID] == "Client_req_sent"):
                 print ("Enjoy!")
                 print (pkt1.Link_to_music)
 
@@ -112,8 +117,9 @@ class ClientProtocol(asyncio.Protocol):
                 ClientRequest1.SessionID = 0
                 ClientRequest1.ACKofServerHello = 1
                 self.transport = None
-    def send(self):
 
+    def send(self):
+        print ("Sending Client Hello")
         packet = ClientHello(UserAuthToken = '111', Genre = 'ROCK')
         self.transport.write(packet.__serialize__())
 
@@ -123,7 +129,7 @@ class ControlProtocol:
         self.txProtocol = None
 
     def buildProtocol(self):
-        return ClientProtocol(self.callback)
+        return ClientProtocol()
 
     def connect(self, txProtocol):
         print ("Calling connect")
@@ -133,9 +139,6 @@ class ControlProtocol:
         self.txProtocol.send()
         #asyncio.get_event_loop().add_reader(self.param, self.stdinAlert)
 
-    def callback(self):
-        print ("this is the message")
-        sys.stdout.flush()
 
 if __name__ == "__main__":
 
@@ -143,7 +146,9 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     control = ControlProtocol()
     coro = playground.getConnector().create_playground_connection(control.buildProtocol, '20174.1.1.1', 102)
+    print ("Coro done")
     transport, protocol = loop.run_until_complete(coro)
+    print ("Coro done")
     control.connect(protocol)
     loop.run_forever()
     loop.close()
