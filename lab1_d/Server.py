@@ -56,6 +56,9 @@ class  ServerStream(PacketType):
 
 ###########################
 
+global dict_sessionID_states
+dict_sessionID_states = {}
+
 class ServerProtocol(asyncio.Protocol):
 
     def __init__(self):
@@ -68,7 +71,8 @@ class ServerProtocol(asyncio.Protocol):
         print ("Welcome to The Jukebox! \n")
         self.deserializer = PacketType.Deserializer()
         self.session_ID = random.randint(1,100)
-
+        print (self.session_ID)
+        dict_sessionID_states[self.session_ID] = "Waiting_for_client_hello"
 
     def Packet2Bytes(self, pkt):
 
@@ -88,7 +92,7 @@ class ServerProtocol(asyncio.Protocol):
                 ServerHello1.GenreAvailable = 1
             else:
                 ServerHello1.GenreAvailable = 0
-            print (ServerHello1.SessionID)
+            print (self.ServerHello1.SessionID)
 
         self.ServerHello_bytes = ServerHello1.__serialize__()
         self.transport.write(self.ServerHello_bytes)
@@ -106,10 +110,13 @@ class ServerProtocol(asyncio.Protocol):
             print ("Let's Rock!")
             ServerStream1.Link_to_music = "https://www.youtube.com/watch?v=3_5RbI9goz4"
         elif self.genre_requested_c == "POP":
+            print ("Please don't stop the music!")
             ServerStream1.Link_to_music = "https://www.youtube.com/watch?v=2VncTzuXhu0&list=PLMAV5w57ey1rYKkjhUwVpdLn3wCUTurGC"
         elif self.genre_requested_c == "CLASSICAL":
+            print ("Elegance served..")
             ServerStream1.Link_to_music = "https://www.youtube.com/watch?v=a-b6JgQa3EY&list=PLauX1OLju8VgJ1-oBaBDGKZeAiFav-mAE"
         elif self.genre_requested_c == "JAZZ":
+            print ("Whiplash anyone?")
             ServerStream1.Link_to_music = "https://www.youtube.com/watch?v=2o4NyCE8-Zs&list=PLjBo9Ev93QFXo9_14jtlHGEir4G_omx34"
         else:
             ServerStream1.Link_to_music == "Unexpected error"
@@ -123,13 +130,15 @@ class ServerProtocol(asyncio.Protocol):
         self.deserializer.update(data)
 
         for pkt in self.deserializer.nextPackets():
-            if (pkt.DEFINITION_IDENTIFIER == "ClientHello"):
-                #dict[self._session_ID] = "Server_Hello_State"
+            if (pkt.DEFINITION_IDENTIFIER == "ClientHello" and dict_sessionID_states[self.session_ID] == "Waiting_for_client_hello"):
+                dict_sessionID_states[self.session_ID] = "Server_Hello_State"
                 self.return_value = self.Genre_Requested_by_Client_function(pkt.Genre)
                 self.Packet2Bytes(pkt)
-            elif (pkt.DEFINITION_IDENTIFIER == "ClientRequest"):
-                #dict[self._session_ID] = "Server_Stream_State"
+            elif (pkt.DEFINITION_IDENTIFIER == "ClientRequest" and dict_sessionID_states[self.session_ID] == "Server_Hello_State"):
+                dict_sessionID_states[self.session_ID] = "Server_Stream_State"
                 self.Packet2Bytes1(pkt, self.return_value)
+            else:
+                print ("Unexpected error")
 
     def Genre_Requested_by_Client_function(self, genre_req):
         return genre_req
