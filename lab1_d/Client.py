@@ -1,5 +1,6 @@
 import asyncio
 import playground
+import sys
 from playground.network.packet import PacketType
 from playground.network.packet.fieldtypes import UINT32,STRING,BOOL,ListFieldType
 from playground.asyncio_lib.testing import TestLoopEx
@@ -55,26 +56,33 @@ class  ServerStream(PacketType):
 
 class ClientProtocol(asyncio.Protocol):
 
-    def __init__(self, message, loop):
-        #self.ipaddress = '127.0.0.1'
-        #self.port = 16000
-        self._transport =  None
-        self.message = message.__serialize__()
-        self.loop = loop
+    def __init__(self, callback = None):
+        self.buffer = ""
+        if callback:
+            self.callback = callback
+            print("It's in callback_1")
+        else:
+            self.callback = print
+
+        self.transport = None
+        self.deserializer = PacketType.Deserializer()
+
+    def close(self):
+        self.__sendMessageActual("__QUIT__")
 
     def connection_made(self, transport):
-        self._transport = transport
-        self._transport.write(self.message)
+        self.transport = transport
+        #self.transport.write(self.message)
         print("Connection to JukeBox successful! \n")
-        self._deserializer = PacketType.Deserializer()
+        self.deserializer = PacketType.Deserializer()
 
     def data_received(self, data):
-        self._deserializer = PacketType.Deserializer()
-        self._deserializer.update(data)
+        self.deserializer = PacketType.Deserializer()
+        self.deserializer.update(data)
 
         ClientRequest1 = ClientRequest()
 
-        for pkt1 in self._deserializer.nextPackets():
+        for pkt1 in self.deserializer.nextPackets():
             if pkt1.DEFINITION_IDENTIFIER == "ServerHello":
                 #print (pkt1)
                 if pkt1.AuthResponse == 1 and pkt1.GenreAvailable == 1:
@@ -85,18 +93,18 @@ class ClientProtocol(asyncio.Protocol):
                     ClientRequest1.ACKofServerHello = 1
 
                     ClientRequest1_bytes = ClientRequest1.__serialize__()
-                    self._transport.write(ClientRequest1_bytes)
+                    self.transport.write(ClientRequest1_bytes)
 
                 elif (pkt1.AuthResponse == 0 and pkt1.GenreAvailable == 1):
                     print ("Genre is Available but auth credentials are wrong")
                     ClientRequest1.SessionID = 0
                     ClientRequest1.ACKofServerHello = 1
-                    self._transport = None
+                    self.transport = None
                 elif (pkt1.AuthResponse == 1 and pkt1.GenreAvailable == 0):
                     print("Genre is not available but auth credentials are right")
                     ClientRequest1.SessionID = 0
                     ClientRequest1.ACKofServerHello = 1
-                    self._transport = None
+                    self.transport = None
 
 
             elif (pkt1.DEFINITION_IDENTIFIER == "ServerStream"):
@@ -107,23 +115,61 @@ class ClientProtocol(asyncio.Protocol):
                 # Close connection and include new states !!!
                 ClientRequest1.SessionID = 0
                 ClientRequest1.ACKofServerHello = 1
-                self._transport = None
+                self.transport = None
                 #print ("Unexpected Error!")
+    def send(self):
+
+        packet = ClientHello(UserAuthToken = '111', Genre = 'ROCK')
+        self.transport.write(packet.__serialize__())
+
+class ControlProtocol:
+
+    def __init__(self):
+        self.txProtocol = None
+        #self.param = RequestConversion().__serialize__()
+        #self.param = "tada"
+
+    def buildProtocol(self):
+        return ClientProtocol(self.callback)
+        #Client1 = MyClient()
+        #Client1.connection_made()
+
+    def connect(self, txProtocol):
+        print ("Calling connect")
+        self.txProtocol = txProtocol
+        print ("Connection to Server established")
+        self.txProtocol = txProtocol
+        self.txProtocol.send()
+        #asyncio.get_event_loop().add_reader(self.param, self.stdinAlert)
+
+    def callback(self):
+        print ("this is the message")
+        sys.stdout.flush()
+        #message = RequestConversion()
+        #self.message = message
+
+    #def stdinAlert(self):
+    #    print ("Entered Stdinput")
+    #    data = self.param
+    #    self.txProtocol.send(data)
 
 
+if __name__ == "__main__":
 
 
-loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop()
+    #loop.set_debug(enabled=True)
 
-ClientHello1 = ClientHello()
-ClientHello1.UserAuthToken = '111'
-ClientHello1.Genre = 'POP'
+    control = ControlProtocol()
 
-message = ClientHello1
+    coro = playground.getConnector().create_playground_connection(control.buildProtocol, '20174.1.1.1', 102)
+    print ("What's up Coro?")
 
-playground.getConnector().create_playground_connection (lambda: ClientProtocol(message, loop), '20174.1.1.1', 101)
+    transport, protocol = loop.run_until_complete(coro)
 
-loop.run_until_complete()
+    print ("Done with the coro")
 
-#loop.run_forever()
-loop.close()
+    control.connect(protocol)
+    loop.run_forever()
+    loop.close()
+
