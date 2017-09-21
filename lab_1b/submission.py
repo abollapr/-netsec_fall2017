@@ -1,9 +1,10 @@
 from playground.network.packet import PacketType
-from playground.network.packet.fieldtypes import UINT32,STRING,BOOL,ListFieldType
+from playground.network.packet.fieldtypes import UINT32, STRING, BOOL, ListFieldType
 import random
 import re
 
-#ClientHello Packet
+
+# ClientHello Packet
 class ClientHello(PacketType):
     DEFINITION_IDENTIFIER = "ClientHello"
     DEFINITION_VERSION = "1.0"
@@ -11,9 +12,10 @@ class ClientHello(PacketType):
     FIELDS = [
         ("UserAuthToken", UINT32),
         ("Genre", STRING)
-        ]
+    ]
 
-#ServerHello Packet
+
+# ServerHello Packet
 class ServerHello(PacketType):
     DEFINITION_IDENTIFIER = "ServerHello"
     DEFINITION_VERSION = "1.0"
@@ -25,19 +27,21 @@ class ServerHello(PacketType):
         ("RequestBitRate", STRING)
     ]
 
-#ClientRequest Packet
+
+# ClientRequest Packet
 class ClientRequest(PacketType):
     DEFINITION_IDENTIFIER = "ClientRequest"
     DEFINITION_VERSION = "1.0"
 
     FIELDS = [
         ("SessionID", UINT32),
-        ("ACKofServerHello",  BOOL)
-        #("BitRate", ListFieldType(STRING))
+        ("ACKofServerHello", BOOL)
+        # ("BitRate", ListFieldType(STRING))
     ]
 
-#ServerStream Packet
-class  ServerStream(PacketType):
+
+# ServerStream Packet
+class ServerStream(PacketType):
     DEFINITION_IDENTIFIER = "ServerStream"
     DEFINITION_VERSION = "1.0"
 
@@ -48,50 +52,49 @@ class  ServerStream(PacketType):
 
 
 def basicUnitTest():
-
-    print ("~~~Welcome to Jukebox!~~~")
+    print("~~~Welcome to Jukebox!~~~")
 
     Genre = input("Please Enter the genre you would like to listen to! Available options - Rock/Pop/Classical/Jazz \n")
     Genre = Genre.upper()
-    print (Genre)
+    print(Genre)
     AuthToken = input("Enter your authentication token - 3 digit\n")
 
-    if int(AuthToken)>0:
-        
+    if int(AuthToken) > 0:
+
         # Packet 1 - Client Hello
         ClientHello1 = ClientHello()
         ClientHello1.UserAuthToken = AuthToken
         ClientHello1.Genre = str(Genre)
 
-        #Sending the packet
+        # Sending the packet
         packetBytes = ClientHello1.__serialize__()
         deserializer_ClientHello = PacketType.Deserialize(packetBytes)
 
         if deserializer_ClientHello == ClientHello1:
-            print ("\nClient Hello has been successfully serialized and deserialized \n")
+            print("\nClient Hello has been successfully serialized and deserialized \n")
         else:
-            print ("\nHouston, we have a problem! \n")
+            print("\nHouston, we have a problem! \n")
             return
 
-        #Genres
-        GenreList = ["ROCK","POP","CLASSICAL","JAZZ"]
-        #AuthTokens
-        #UserTokens = [123,345,567,789,901]
+        # Genres
+        GenreList = ["ROCK", "POP", "CLASSICAL", "JAZZ"]
+        # AuthTokens
+        # UserTokens = [123,345,567,789,901]
 
-        print ("==Server processing Client Hello==")
+        print("==Server processing Client Hello==")
 
-        #Generating Random Session IDs
-        SessionID_Random = random.randint(1,100)
-        
-        #Packet 2 - Server Hello
+        # Generating Random Session IDs
+        SessionID_Random = random.randint(1, 100)
+
+        # Packet 2 - Server Hello
         ServerHello1 = ServerHello()
         ServerHello1.SessionID = SessionID_Random
 
-        #Keeping track of all ongoing sessions
-        #SessionID_Random_List = []
-        #SessionID_Random_List.insert(0,SessionID_Random)
-        
-        #Authentication token at this moment can be any 3 digit number
+        # Keeping track of all ongoing sessions
+        # SessionID_Random_List = []
+        # SessionID_Random_List.insert(0,SessionID_Random)
+
+        # Authentication token at this moment can be any 3 digit number
         if re.match("^\d\d\d$", str(deserializer_ClientHello.UserAuthToken)):
 
             ServerHello1.AuthResponse = 1
@@ -102,31 +105,31 @@ def basicUnitTest():
             else:
                 ServerHello1.GenreAvailable = 0
         else:
-            ServerHello1.AuthResponse =0
+            ServerHello1.AuthResponse = 0
             ServerHello1.GenreAvailable = 0
             ServerHello1.RequestBitRate = "NULL"
 
-        #Sending out the Server response
+        # Sending out the Server response
         packetBytes1 = ServerHello1.__serialize__()
 
         deserializer1 = PacketType.Deserialize(packetBytes1)
 
         if (deserializer1.GenreAvailable == True and deserializer1.AuthResponse == 1):
-            print ("Your requested Genre is available!")
+            print("Your requested Genre is available!")
         else:
-            print ("SERVER SIDE ERROR: Error with Genre or Username")
-        
-        #Packet 3 - Client Request 
+            print("SERVER SIDE ERROR: Error with Genre or Username")
+
+        # Packet 3 - Client Request
         ClientRequest1 = ClientRequest()
         ClientRequest1.SessionID = deserializer1.SessionID
-        #print (ClientRequest1.SessionID)
+        # print (ClientRequest1.SessionID)
         ClientRequest1.ACKofServerHello = 1
         if (deserializer1.AuthResponse == 1 and deserializer1.GenreAvailable == 1):
-            print ("Authentication Succeeded")
-            #ClientRequest1.BitRate = ["320Kbps","123Kbps"]
+            print("Authentication Succeeded")
+            # ClientRequest1.BitRate = ["320Kbps","123Kbps"]
         else:
-            print ("Authentication Failed :( ")
-            #ClientRequest1.BitRate = ["0"]
+            print("Authentication Failed :( ")
+            # ClientRequest1.BitRate = ["0"]
             return (basicUnitTest())
 
         ClientRequest1_serialize = ClientRequest1.__serialize__()
@@ -134,8 +137,8 @@ def basicUnitTest():
         ClientRequest1_deserailze = PacketType.Deserialize(ClientRequest1_serialize)
 
         assert ClientRequest1_deserailze == ClientRequest1
-        
-        #Packet 4 - Server Stream
+
+        # Packet 4 - Server Stream
         ServerStream1 = ServerStream()
         ServerStream1.SessionID = deserializer1.SessionID
 
@@ -151,23 +154,24 @@ def basicUnitTest():
             ServerStream1.Linktomusic == "Unexpected error"
 
         ServerStream1_serializer = ServerStream1.__serialize__()
-        
-        #Deserializing the final response from the server.
-        deserializer1 =  PacketType.Deserializer()
+
+        # Deserializing the final response from the server.
+        deserializer1 = PacketType.Deserializer()
         while len(ServerStream1_serializer) > 0:
-            chunk, ServerStream1_serializer =  ServerStream1_serializer[:10], ServerStream1_serializer[10:]
+            chunk, ServerStream1_serializer = ServerStream1_serializer[:10], ServerStream1_serializer[10:]
             deserializer1.update(chunk)
 
             for packet in deserializer1.nextPackets():
                 if packet == ServerStream1:
-                    print (str(packet.Linktomusic))
+                    print(str(packet.Linktomusic))
                 else:
-                    print ("Packet lost in transmission!")
+                    print("Packet lost in transmission!")
 
 
     else:
-        print ("Incorrect Auth Token. Value should be anything above 0")
-        return(basicUnitTest())
+        print("Incorrect Auth Token. Value should be anything above 0")
+        return (basicUnitTest())
 
-if __init__ = "__main__":   
+
+if __name__ == "__main__":
     basicUnitTest()
